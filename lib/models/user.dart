@@ -1,68 +1,37 @@
-import 'knowledge_card.dart';
-import 'knowledge_folder.dart';
-import 'study_session.dart';
-import 'battle_session.dart';
-import 'reward.dart';
-import 'chest.dart';
+// lib/models/user_model.dart (rename from user.dart if needed)
 
-class User {
-  int arenaPoints;
-  List<KnowledgeCard> cards;
-  List<KnowledgeFolder> folders;
-  List<StudySession> sessions;
-  List<BattleSession> battleSessions;
-  List<Chest> chests;
-  List<Reward> rewards;
+class UserModel {
+   int arenaPoints;
+  // NO lists of cards, folders, sessions here. They are in separate subcollections.
+  // Add other top-level user properties like email, username, etc. if you load them with the user doc.
 
-  User({
+  UserModel({
     required this.arenaPoints,
-    required this.cards,
-    required this.folders,
-    required this.sessions,
-    required this.battleSessions,
-    required this.chests,
-    required this.rewards,
+    // Add other properties as needed
   });
 
+  // Factory constructor for creating a new User instance from a map
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      arenaPoints: json['arenaPoints'] as int? ?? 0,
+      // Map other properties if they exist in your user document
+    );
+  }
+
+  // Method to convert a User instance into a map
   Map<String, dynamic> toJson() {
     return {
       'arenaPoints': arenaPoints,
-      'cards': cards.map((c) => c.toJson()).toList(),
-      'folders': folders.map((f) => f.toJson()).toList(),
-      'sessions': sessions.map((s) => s.toJson()).toList(),
-      'battleSessions': battleSessions.map((b) => b.toJson()).toList(),
-      'chests': chests.map((c) => c.toJson()).toList(),
-      'rewards': rewards.map((r) => r.toJson()).toList(),
+      // Map other properties if they exist
     };
   }
 
-  factory User.fromJson(Map<String, dynamic> json) {
-    return User(
-      arenaPoints: json['arenaPoints'] ?? 0,
-      cards: (json['cards'] as List?)
-          ?.map((c) => KnowledgeCard.fromJson(c))
-          .toList() ??
-          [],
-      folders: (json['folders'] as List?)
-          ?.map((f) => KnowledgeFolder.fromJson(f))
-          .toList() ??
-          [],
-      sessions: (json['sessions'] as List?)
-          ?.map((s) => StudySession.fromJson(s))
-          .toList() ??
-          [],
-      battleSessions: (json['battleSessions'] as List?)
-          ?.map((b) => BattleSession.fromJson(b))
-          .toList() ??
-          [],
-      chests: (json['chests'] as List?)
-          ?.map((c) => Chest.fromJson(c))
-          .toList() ??
-          [],
-      rewards: (json['rewards'] as List?)
-          ?.map((r) => Reward.fromJson(r))
-          .toList() ??
-          [],
+  // Optional: copyWith method for immutability
+  UserModel copyWith({
+    int? arenaPoints,
+  }) {
+    return UserModel(
+      arenaPoints: arenaPoints ?? this.arenaPoints,
     );
   }
 }

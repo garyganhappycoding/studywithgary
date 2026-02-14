@@ -5,6 +5,8 @@ import '../main.dart';
 import '../models/study_session.dart';
 import '../models/reward.dart';
 import '../models/battle_session.dart';
+import '../providers/user_provider.dart';
+import '../services/background_timer_service.dart'; // ✅ ADD THIS
 
 class StudySessionScreen extends StatefulWidget {
   final VoidCallback? onStudyComplete;
@@ -26,6 +28,9 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   static const int _longBreakDurationMinutes = 15;
   static const int _pomodorosBeforeLongBreak = 4;
 
+  static const int _adjustmentIncrementMinutes = 5;
+  static const int _minimumTimerMinutes = 1;
+
   Timer? _timer;
   int _secondsRemaining = _pomodoroDurationMinutes * 60;
   bool _isRunning = false;
@@ -34,8 +39,12 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   bool _isBreak = false;
   bool _isLongBreak = false;
   DateTime? _sessionStartTime;
+  DateTime? _pausedTime; // ✅ NEW: Track when paused
 
-  // Tower tracking
+  int _customPomodoroDurationMinutes = _pomodoroDurationMinutes;
+  int _customShortBreakMinutes = _shortBreakDurationMinutes;
+  int _customLongBreakMinutes = _longBreakDurationMinutes;
+
   late bool _tower1Completed;
   late bool _tower2Completed;
   late bool _tower3Completed;
@@ -43,7 +52,6 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
   late String _tower2Goal;
   late String _tower3Goal;
 
-  // Reference to the battle session being worked on
   BattleSession? _currentBattleSession;
 
   @override
@@ -51,7 +59,6 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     super.initState();
     _currentBattleSession = widget.battleSession;
 
-    // Initialize tower data from battleSession
     if (_currentBattleSession != null) {
       _tower1Goal = _currentBattleSession!.tower1Goal;
       _tower2Goal = _currentBattleSession!.tower2Goal;
@@ -60,7 +67,6 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       _tower2Completed = _currentBattleSession!.tower2Won > 0;
       _tower3Completed = _currentBattleSession!.tower3Won > 0;
     } else {
-      // Fallback or handle cases where no battleSession is passed
       _tower1Goal = "";
       _tower2Goal = "";
       _tower3Goal = "";
@@ -68,6 +74,47 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       _tower2Completed = false;
       _tower3Completed = false;
     }
+  }
+
+  void _increaseTimer() {
+    if (_isRunning) return;
+
+    setState(() {
+      _secondsRemaining += _adjustmentIncrementMinutes * 60;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '⬆️ Timer increased by $_adjustmentIncrementMinutes minutes!',
+        ),
+        duration: const Duration(seconds: 1),
+        backgroundColor: Colors.blue,
+      ),
+    );
+  }
+
+  void _decreaseTimer() {
+    if (_isRunning) return;
+
+    final minimumSeconds = _minimumTimerMinutes * 60;
+
+    setState(() {
+      _secondsRemaining -= _adjustmentIncrementMinutes * 60;
+      if (_secondsRemaining < minimumSeconds) {
+        _secondsRemaining = minimumSeconds;
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '⬇️ Timer decreased by $_adjustmentIncrementMinutes minutes!',
+        ),
+        duration: const Duration(seconds: 1),
+        backgroundColor: Colors.orange,
+      ),
+    );
   }
 
   void _startTimer() {
@@ -80,11 +127,25 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       }
     });
 
+    // ✅ NEW: Start background service as foreground
+    BackgroundTimerService.updateTimerInBackground(
+      remainingSeconds: _secondsRemaining,
+      isBreak: _isBreak,
+      isLongBreak: _isLongBreak,
+    );
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining > 0) {
         setState(() {
           _secondsRemaining--;
         });
+
+        // ✅ NEW: Update background notification every second
+        BackgroundTimerService.updateTimerInBackground(
+          remainingSeconds: _secondsRemaining,
+          isBreak: _isBreak,
+          isLongBreak: _isLongBreak,
+        );
       } else {
         timer.cancel();
         _handleTimerEnd();
@@ -96,6 +157,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     _timer?.cancel();
     setState(() {
       _isRunning = false;
+      _pausedTime = DateTime.now(); // ✅ NEW: Record pause time
     });
   }
 
@@ -103,11 +165,12 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     _timer?.cancel();
     setState(() {
       _isRunning = false;
-      _secondsRemaining = _pomodoroDurationMinutes * 60;
+      _secondsRemaining = _customPomodoroDurationMinutes * 60;
       _pomodoroCount = 0;
       _isBreak = false;
       _isLongBreak = false;
       _sessionStartTime = null;
+      _pausedTime = null;
     });
   }
 
@@ -129,7 +192,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
       } else {
         _startShortBreak();
       }
-      _saveStudySession(userProvider, _pomodoroDurationMinutes);
+      _saveStudySession(userProvider, _customPomodoroDurationMinutes);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -145,7 +208,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     setState(() {
       _isBreak = false;
       _isLongBreak = false;
-      _secondsRemaining = _pomodoroDurationMinutes * 60;
+      _secondsRemaining = _customPomodoroDurationMinutes * 60;
     });
     _startTimer();
   }
@@ -154,7 +217,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     setState(() {
       _isBreak = true;
       _isLongBreak = false;
-      _secondsRemaining = _shortBreakDurationMinutes * 60;
+      _secondsRemaining = _customShortBreakMinutes * 60;
     });
     _startTimer();
   }
@@ -163,7 +226,7 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     setState(() {
       _isBreak = true;
       _isLongBreak = true;
-      _secondsRemaining = _longBreakDurationMinutes * 60;
+      _secondsRemaining = _customLongBreakMinutes * 60;
     });
     _startTimer();
   }
@@ -192,14 +255,12 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     return '$minutes:$seconds';
   }
 
-  // Check if all towers are completed
   bool _areAllTowersCompleted() {
     return _tower1Completed && _tower2Completed && _tower3Completed;
   }
 
-  // Handle tower completion and update the provider
   void _toggleTower(int towerNumber) {
-    if (_currentBattleSession == null) return; // Safety check
+    if (_currentBattleSession == null) return;
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     bool changed = false;
@@ -221,25 +282,20 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     });
 
     if (changed) {
-      // If a tower's state actually changed, update the provider
       userProvider.updateBattleSession(_currentBattleSession!);
 
-      // Check if all towers are completed
       if (_areAllTowersCompleted()) {
         _timer?.cancel();
         _isRunning = false;
 
-        // Set completedAt for the battle session
         _currentBattleSession!.completedAt = true;
         userProvider.updateBattleSession(_currentBattleSession!);
 
-        // Generate chest and show success message
         _showBattleWonDialog(userProvider);
       }
     }
   }
 
-  // Show battle won dialog
   void _showBattleWonDialog(UserProvider userProvider) {
     final rewardData =
     userProvider.getRandomRewardAndType(RewardType.common);
@@ -289,6 +345,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
 
   void _endBattle() {
     _timer?.cancel();
+    _isRunning = false;
+
+    // ✅ NEW: Stop background service
+    BackgroundTimerService.stopBackgroundService();
+
     if (_currentBattleSession != null) {
       if (_areAllTowersCompleted() && !_currentBattleSession!.completedAt) {
         _currentBattleSession!.completedAt = true;
@@ -321,7 +382,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
 
     return WillPopScope(
       onWillPop: () async {
-        _timer?.cancel();
+        // ✅ NEW: Keep timer running when navigating back
+        if (!_isRunning) {
+          _timer?.cancel();
+          BackgroundTimerService.stopBackgroundService();
+        }
         if (_currentBattleSession != null) {
           Provider.of<UserProvider>(context, listen: false)
               .updateBattleSession(_currentBattleSession!);
@@ -334,7 +399,11 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
           title: const Text("Study Session"),
           leading: BackButton(
             onPressed: () {
-              _timer?.cancel();
+              // ✅ NEW: Keep timer running when navigating back
+              if (!_isRunning) {
+                _timer?.cancel();
+                BackgroundTimerService.stopBackgroundService();
+              }
               if (_currentBattleSession != null) {
                 Provider.of<UserProvider>(context, listen: false)
                     .updateBattleSession(_currentBattleSession!);
@@ -349,7 +418,6 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Towers Section
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -389,7 +457,6 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                 const SizedBox(height: 20),
                 const Divider(),
                 const SizedBox(height: 20),
-                // Timer Section
                 Text(
                   currentMode,
                   style: TextStyle(
@@ -399,14 +466,54 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text(
-                  _formatTime(_secondsRemaining),
-                  style: const TextStyle(
-                    fontSize: 80,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+
+                GestureDetector(
+                  onVerticalDragEnd: (details) {
+                    if (details.velocity.pixelsPerSecond.dy < 0) {
+                      _increaseTimer();
+                    } else if (details.velocity.pixelsPerSecond.dy > 0) {
+                      _decreaseTimer();
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: _isRunning
+                            ? Colors.grey
+                            : Colors.blue.withOpacity(0.5),
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.grey.withOpacity(0.1),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          _formatTime(_secondsRemaining),
+                          style: const TextStyle(
+                            fontSize: 80,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        if (!_isRunning)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Text(
+                              'Swipe ⬆️/⬇️ to adjust',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
+
                 const SizedBox(height: 30),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -497,7 +604,6 @@ class _StudySessionScreenState extends State<StudySessionScreen> {
     );
   }
 
-  // Build tower checkbox widget
   Widget _buildTowerCheckbox(
       String title,
       String description,

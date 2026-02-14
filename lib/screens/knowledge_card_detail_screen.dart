@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/knowledge_card.dart';
-import '../main.dart'; // Assuming UserProvider is in main.dart
+import '../providers/user_provider.dart';
 
 class KnowledgeCardDetailScreen extends StatefulWidget {
   final KnowledgeCard? card; // Null if creating a new card

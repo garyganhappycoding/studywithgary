@@ -4,6 +4,7 @@ import '../main.dart'; // Assuming UserProvider is in main.dart
 import '../models/knowledge_card.dart';
 import '../models/knowledge_folder.dart';
 import 'knowledge_card_detail_screen.dart'; // Import the new screen
+import '../providers/user_provider.dart';
 
 class KnowledgeCardsScreen extends StatefulWidget {
   const KnowledgeCardsScreen({super.key});

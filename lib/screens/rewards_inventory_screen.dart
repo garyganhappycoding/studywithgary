@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../main.dart';
 import '../models/reward.dart';
+import '../providers/user_provider.dart';
 
 class RewardsInventoryScreen extends StatefulWidget {
   const RewardsInventoryScreen({super.key});
@@ -282,7 +283,7 @@ class _RewardsInventoryScreenState extends State<RewardsInventoryScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                                  ),
+                ),
               ),
               const SizedBox(height: 12),
               StatefulBuilder(
