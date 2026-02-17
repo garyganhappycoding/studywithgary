@@ -5,6 +5,7 @@ import 'battle_screen.dart';
 import 'knowledge_cards_screen.dart';
 import 'chest_screen.dart';
 import 'rewards_inventory_screen.dart';
+import '../providers/user_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

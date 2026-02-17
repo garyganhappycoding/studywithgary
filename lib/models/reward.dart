@@ -17,6 +17,25 @@ class Reward {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
+  // ✅ ADD THIS copyWith METHOD
+  Reward copyWith({
+    String? id,
+    String? title,
+    String? description,
+    RewardType? type,
+    bool? claimed,
+    DateTime? createdAt,
+  }) {
+    return Reward(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      type: type ?? this.type,
+      claimed: claimed ?? this.claimed,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

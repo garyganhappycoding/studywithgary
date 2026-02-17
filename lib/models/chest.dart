@@ -17,6 +17,25 @@ class Chest {
     this.openedAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
+  // ✅ ADD THIS copyWith METHOD
+  Chest copyWith({
+    String? id,
+    String? reward,
+    RewardType? rewardType,
+    bool? opened,
+    DateTime? createdAt,
+    DateTime? openedAt,
+  }) {
+    return Chest(
+      id: id ?? this.id,
+      reward: reward ?? this.reward,
+      rewardType: rewardType ?? this.rewardType,
+      opened: opened ?? this.opened,
+      createdAt: createdAt ?? this.createdAt,
+      openedAt: openedAt ?? this.openedAt,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
